@@ -1,0 +1,127 @@
+{
+    "college_timings": {
+        "questions": [
+            "What are the college timings?",
+            "When does college start?",
+            "When does college end?",
+            "What time does college open?",
+            "What time does college close?",
+            "College working hours"
+        ],
+        "answer": "The college timings are from 9:00 AM to 4:30 PM on working days."
+    },
+
+    "library": {
+        "questions": [
+            "What are the library timings?",
+            "When does the library open?",
+            "When does the library close?",
+            "What time is the library open?"
+        ],
+        "answer": "The library is open from 9:00 AM to 6:00 PM on working days."
+    },
+
+    "courses": {
+        "questions": [
+            "What courses are offered?",
+            "What courses are available?",
+            "Which courses does the college offer?",
+            "What programs are available?"
+        ],
+        "answer": "CMR University offers the following courses:\n\n1. CSE\n2. ECE\n3. Data Science\n4. CST\n5. CE\n6. AIML\n7. B.Com\n8. BCA\n9. MBA"
+    },    
+
+    "exams": {
+        "questions": [
+            "When are the exams?",
+            "When are semester exams?",
+            "What is the exam date?",
+            "When will exams start?",
+            "Exam schedule"
+        ],
+        "answer": "The semester examination schedule is announced by the examination department."
+    },
+
+    "fees": {
+        "questions": [
+            "What is the fee structure?",
+            "How much is the college fee?",
+            "What are the fees?",
+            "How much do I have to pay?"
+        ],
+        "answer": "The fee structure depends on the course and year of study. Please contact the college office for the latest details."
+    },
+
+    "hostel": {
+        "questions": [
+            "Is hostel facility available?",
+            "Does the college have a hostel?",
+            "Is hostel available?",
+            "What about hostel facilities?"
+        ],
+        "answer": "Yes, hostel facilities are available for eligible students. Contact the hostel office for details."
+    },
+    "hostel_fees": {
+    "questions": [
+        "What is the hostel fee?",
+        "How much is the hostel fee?",
+        "What are the hostel charges?",
+        "How much does hostel cost?",
+        "What is the boys hostel fee?",
+        "What is the girls hostel fee?",
+        "How much is hostel for boys?",
+        "How much is hostel for girls?"
+    ],
+    "answer": "Hostel fees depend on sharing and gender.\n\nBOYS HOSTEL FEES (per year):\n\n1-sharing: \u20b92,00,000\n2-sharing: \u20b91,75,000\n3-sharing: \u20b91,50,000\n4-sharing: \u20b91,25,000\n\nGIRLS HOSTEL FEES (per year):\n\n1-sharing: \u20b92,25,000\n2-sharing: \u20b92,00,000\n3-sharing: \u20b91,75,000\n4-sharing: \u20b91,50,000"
+},
+"transportation_fees": {
+    "questions": [
+        "What is the transportation fee?",
+        "How much is the bus fee?",
+        "What is the college bus fee?",
+        "How much does transportation cost?",
+        "What is the transport fee?"
+    ],
+    "answer": "ANNUAL TRANSPORTATION FEES:\n\nYelahanka Old Town: \u20b95,000 per year\nHennur: \u20b95,500 per year\nReva Circle: \u20b94,300 per year"
+    },
+    "transport": {
+        "questions": [
+            "Does the college provide bus facilities?",
+            "Is college bus available?",
+            "Does the college have transportation?",
+            "What about college buses?"
+        ],
+        "answer": "Yes, college transportation facilities are available on selected routes."
+    },
+
+    "placements": {
+        "questions": [
+            "Does the college provide placements?",
+            "Are placements available?",
+            "Does the college have placements?",
+            "Tell me about placements",
+            "What about campus placements?"
+        ],
+        "answer": "Yes, the college has a placement cell that helps students with placement and career opportunities."
+    },
+
+    "attendance": {
+        "questions": [
+            "What is the attendance requirement?",
+            "How much attendance is required?",
+            "What is the minimum attendance?",
+            "How many percent attendance is required?"
+        ],
+        "answer": "Students are expected to maintain the minimum attendance percentage required by the college regulations."
+    },
+
+    "contact": {
+        "questions": [
+            "How can I contact the college?",
+            "What is the college contact number?",
+            "How do I contact the college?",
+            "College contact details"
+        ],
+        "answer": "You can contact the college office through the official college contact number or email."
+    }
+}
