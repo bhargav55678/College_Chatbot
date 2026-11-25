@@ -1,5 +1,7 @@
 import streamlit as st
 import re
+import json
+from pathlib import Path
 
 # =========================================================
 # PAGE CONFIGURATION
@@ -25,20 +27,74 @@ CONTACT = "+91 9342900666"
 RUPEE = "\u20b9"
 
 # =========================================================
-# COURSES
+# COURSE CATALOGUE (LOCAL - NO JSON KEY REQUIRED)
 # =========================================================
 
 COURSES = [
-    "CSE",
-    "ECE",
-    "Data Science",
-    "CST",
-    "CE",
-    "AIML",
-    "B.Com",
-    "BCA",
-    "MBA"
+    "M.Tech. in VLSI Design & Semiconductor Technology",
+    "MCA in Artificial Intelligence and Machine Learning",
+    "B.Com. | Fintech",
+    "M.Com | Fintech with AI Taxation",
+    "B.Tech. | AI & DS",
+    "Bachelor in Medical Radiology and Imaging Technology (MRIT)",
+    "Bachelor in Anaesthesia and Operation Theatre Technology (AOTT)",
+    "B.Sc. (Hons.) (Hospital Administration)",
+    "B.Sc. (Hons.) (Medical Laboratory Technology)",
+    "Bachelor of Optometry",
+    "M.Sc. Information Technology (AI & ML)",
+    "MCA",
+    "B.Sc. Information Technology (AI & ML)",
+    "BCA (AI & ML)",
+    "BCA | Game Development",
+    "BCA in Cloud Computing",
+    "BCA | Data Science",
+    "Bachelor of Computer Applications (BCA)",
+    "LL.M. | Criminal Law",
+    "LL.M. | Commercial Law",
+    "LL.M. | Constitutional Law",
+    "3-Year LL.B. (Bachelor of Laws)",
+    "5-Year Integrated BBA LL.B. (Hons.)",
+    "B.A., LL.B. (Hons.)",
+    "M.Sc. Psychology | HRDM",
+    "M.Sc. Psychology (Counselling)",
+    "M.Sc. Clinical Psychology",
+    "B.Sc. | Psychology",
+    "B.A. Psychology, English, Journalism, Economics, Political Science, History, Sociology, Media Studies, Travel & Tourism",
+    "E-MBA | Product Leadership",
+    "MBA | Business Analytics & Business Intelligence",
+    "MBA | Technology Management",
+    "MBA | Dual Specialisation",
+    "BBA | Tourism & Hospitality Management",
+    "BBA | Logistics & SCM",
+    "BBA | Data Science",
+    "BBA | Fintech",
+    "BBA | Business Analytics",
+    "BBA | Digital Marketing",
+    "BBA",
+    "M.Tech. Artificial Intelligence",
+    "M.Tech. Computer Science & Engineering",
+    "B.Tech. Computer Engineering (AI & ML)",
+    "B.Tech. ECE",
+    "B.Tech. CST (AI & ML / IoT)",
+    "B.Tech. IT",
+    "B.Tech. CSE | Data Science",
+    "B.Tech. Artificial Intelligence & Machine Learning",
+    "B.Tech. Computer Science & Engineering",
+    "B.Com. | US CMA",
+    "B.Com. | Data Science",
+    "B.Com. | International Accounting & Finance (ACCA)",
+    "B.Com. | Professional CA-Integrated",
+    "Bachelor of Commerce",
+    "B.Sc. VFX & Animation",
+    "B.Sc. Sound Engineering",
+    "B.Des. Interior Design",
+    "B.Des. Fashion Design",
+    "B.Des. Product Design",
+    "B.Des. Communication Design",
+    "Bachelor of Architecture",
 ]
+
+FEE_COURSES = list(COURSES)
 
 # =========================================================
 # COURSE FEES
@@ -56,65 +112,32 @@ COURSE_FEES = {
     "MBA": 137000
 }
 
+# User-provided default annual fees for newly added catalogue courses.
+# Existing values above are preserved exactly.
+PG_PREFIXES = ("m.tech", "mca", "m.com", "m.sc", "mba", "e-mba", "ll.m")
+
+
+def get_course_fee(course):
+    """Return an existing fee, or the agreed default for a newly added course."""
+    if course in COURSE_FEES:
+        return COURSE_FEES[course]
+    title = course.lower().strip()
+    if title.startswith(PG_PREFIXES) or "master of" in title:
+        return 150000
+    return 135000
+
+# Add a fee value for every listed course without overwriting legacy amounts.
+for _course in COURSES:
+    COURSE_FEES.setdefault(_course, get_course_fee(_course))
+FEE_COURSES = list(COURSES)
+
 # =========================================================
 # COURSE EXPLANATIONS
 # =========================================================
 
 COURSE_EXPLANATIONS = {
-    "CSE": (
-        "CSE stands for Computer Science and Engineering. "
-        "It focuses on programming, software development, "
-        "data structures, algorithms, databases, operating systems, "
-        "computer networks and other areas of computer science."
-    ),
-
-    "ECE": (
-        "ECE stands for Electronics and Communication Engineering. "
-        "It focuses on electronics, communication systems, digital electronics, "
-        "embedded systems, signal processing and related technologies."
-    ),
-
-    "Data Science": (
-        "Data Science is a field that focuses on collecting, analyzing "
-        "and interpreting data. It involves statistics, programming, "
-        "data analysis, machine learning and data visualization."
-    ),
-
-    "CST": (
-        "CST stands for Computer Science and Technology. "
-        "It focuses on computer science concepts, programming, "
-        "software technologies, databases, networking and modern computing."
-    ),
-
-    "CE": (
-        "CE stands for Civil Engineering. "
-        "It focuses on construction, structural engineering, buildings, "
-        "roads, transportation, surveying and infrastructure development."
-    ),
-
-    "AIML": (
-        "AIML stands for Artificial Intelligence and Machine Learning. "
-        "It focuses on artificial intelligence, machine learning, "
-        "deep learning, data analysis and intelligent systems."
-    ),
-
-    "B.Com": (
-        "B.Com stands for Bachelor of Commerce. "
-        "It focuses on accounting, finance, business, economics, "
-        "taxation and other commerce-related subjects."
-    ),
-
-    "BCA": (
-        "BCA stands for Bachelor of Computer Applications. "
-        "It focuses on computer applications, programming, databases, "
-        "web development and software-related technologies."
-    ),
-
-    "MBA": (
-        "MBA stands for Master of Business Administration. "
-        "It focuses on business management, finance, marketing, "
-        "human resources, operations and entrepreneurship."
-    )
+    course: "Program listed in the CMR University course catalogue. Contact the university for curriculum, eligibility and admission details."
+    for course in COURSES
 }
 
 # =========================================================
@@ -202,522 +225,249 @@ def get_sharing_number(question):
 # MAIN CHATBOT FUNCTION
 # =========================================================
 
+def normalize_text(value):
+    """Normalize punctuation, symbols and whitespace for tolerant matching."""
+    value = str(value).lower().replace("&", " and ")
+    value = re.sub(r"[^a-z0-9]+", " ", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def ask_optional_gemini(question):
+    """External AI is deliberately disabled. The app works locally without API keys."""
+    return None
+
+
+def phrase_match(question, phrases):
+    """Match a phrase exactly or tolerate small typing mistakes using stdlib only."""
+    q = normalize_text(question)
+    if not q:
+        return False
+    words = q.split()
+    for phrase in phrases:
+        target = normalize_text(phrase)
+        if not target:
+            continue
+        if target in q:
+            return True
+        target_words = target.split()
+        # Compare short user tokens against the target phrase tokens.
+        if len(target_words) == 1:
+            token = target_words[0]
+            if any(len(w) >= 4 and __import__('difflib').SequenceMatcher(None, w, token).ratio() >= 0.82 for w in words):
+                return True
+    return False
+
+
 def find_answer(user_question):
+    """Answer college-portal questions using local data only; no API is called."""
+    q = normalize_text(user_question)
+    if not q:
+        return "Please type a question so I can help."
 
-    question = user_question.lower().strip()
-
-    # =====================================================
-    # 1. GREETINGS
-    # =====================================================
-
-    if question in [
-        "hi",
-        "hello",
-        "hey",
-        "hii",
-        "hiii"
-    ]:
-
-        return (
-            f"Hello! 👋 Welcome to the {COLLEGE_NAME} Chatbot.\n\n"
-            "I can help you with courses, fees, hostel, transport, "
-            "timings, library, placements, attendance and contact information."
-        )
-
-    # =====================================================
-    # 2. THANK YOU
-    # =====================================================
-
-    if question in [
-        "thanks",
-        "thank you",
-        "thankyou",
-        "thank u",
-        "thx"
-    ]:
-
+    # Greetings and conversational messages
+    if q in {"hi", "hello", "hey", "hii", "hiii", "good morning", "good afternoon", "good evening"}:
+        return (f"Hello! Welcome to the {COLLEGE_NAME} Student Assistant. "
+                "Ask me about courses, fees, hostel, transport, timings, library, "
+                "placements, attendance, examinations or contact details.")
+    if q in {"thanks", "thank you", "thankyou", "thank u", "thx"}:
         return "You're welcome! 😊"
+    if any(x in q for x in ("who are you", "what are you", "your name")):
+        return "I am the CMR University Student Assistant. I can help with the college information available in this portal."
 
-    # =====================================================
-    # 3. HOSTEL - SPECIFIC FEES FIRST
-    # =====================================================
+    # College timings (including misspellings and conversational variants)
+    college_context = any(x in q for x in ("college", "university", "campus", "class", "classes", "working hours"))
+    time_context = any(x in q for x in ("time", "timing", "timings", "timimgs", "open", "opens", "close", "closes", "start", "starts", "end", "ends", "hours", "schedule"))
+    if (college_context and time_context) or phrase_match(q, [
+        "timings of college", "timing of college", "tell me the timings", "when does college open",
+        "when does college close", "when do classes start", "when do classes end", "college schedule",
+        "college working hours", "timimgs of college", "tell me college timings"
+    ]):
+        return f"{COLLEGE_NAME} college timings are {COLLEGE_TIMINGS}."
 
-    has_boys = contains_any(
-        question,
-        [
-            "boys",
-            "boy",
-            "boys hostel",
-            "boy hostel"
-        ]
-    )
+    # Library timings and information
+    if "library" in q:
+        if any(x in q for x in ("time", "timing", "timings", "open", "close", "hour", "when", "schedule")):
+            return f"Library timings are {LIBRARY_TIMINGS}."
+        return f"The university library is available from {LIBRARY_TIMINGS}."
 
-    has_girls = contains_any(
-        question,
-        [
-            "girls",
-            "girl",
-            "girls hostel",
-            "girl hostel"
-        ]
-    )
+    # Hostel and sharing-wise fees
+    hostel_context = any(x in q for x in ("hostel", "accommodation", "residence", "student housing", "stay facility"))
+    fee_context = any(x in q for x in ("fee", "fees", "cost", "price", "tuition", "charge", "charges", "how much"))
+    if hostel_context:
+        m = re.search(r"\b([1-4])\s*(?:sharing|share)\b|\b(?:sharing|share)\s*([1-4])\b", q)
+        sharing = int(next(g for g in m.groups() if g)) if m else None
+        boys = any(x in q for x in ("boy", "boys", "male"))
+        girls = any(x in q for x in ("girl", "girls", "female"))
+        if fee_context or "fee" in q or "charge" in q or "cost" in q:
+            if boys and sharing:
+                return f"Boys hostel {sharing}-sharing fee is {money(BOYS_HOSTEL_FEES[sharing])} per year."
+            if girls and sharing:
+                return f"Girls hostel {sharing}-sharing fee is {money(GIRLS_HOSTEL_FEES[sharing])} per year."
+            if boys:
+                return "Boys hostel fees per year:\n\n" + "\n".join(f"• {n}-sharing: {money(v)}" for n, v in BOYS_HOSTEL_FEES.items())
+            if girls:
+                return "Girls hostel fees per year:\n\n" + "\n".join(f"• {n}-sharing: {money(v)}" for n, v in GIRLS_HOSTEL_FEES.items())
+            return ("Hostel fees per year:\n\nBOYS HOSTEL\n" + "\n".join(f"• {n}-sharing: {money(v)}" for n, v in BOYS_HOSTEL_FEES.items()) +
+                    "\n\nGIRLS HOSTEL\n" + "\n".join(f"• {n}-sharing: {money(v)}" for n, v in GIRLS_HOSTEL_FEES.items()))
+        return "Hostel facilities are listed for boys and girls. Ask for boys' or girls' hostel fees and 1-, 2-, 3- or 4-sharing options."
 
-    has_hostel = contains_any(
-        question,
-        [
-            "hostel",
-            "hostel fee",
-            "hostel fees",
-            "hostel cost",
-            "hostel price"
-        ]
-    )
-
-    sharing = get_sharing_number(question)
-
-    # Boys specific sharing
-
-    if has_boys and sharing is not None:
-
-        fee = BOYS_HOSTEL_FEES[sharing]
-
-        return (
-            f"Boys hostel {sharing}-sharing fee is "
-            f"{money(fee)} per year."
-        )
-
-    # Girls specific sharing
-
-    if has_girls and sharing is not None:
-
-        fee = GIRLS_HOSTEL_FEES[sharing]
-
-        return (
-            f"Girls hostel {sharing}-sharing fee is "
-            f"{money(fee)} per year."
-        )
-
-    # General boys hostel fee
-
-    if has_boys and contains_any(
-        question,
-        [
-            "fee",
-            "fees",
-            "cost",
-            "price",
-            "charges"
-        ]
-    ):
-
-        return (
-            "Boys hostel fees per year are:\n\n"
-            f"• 1 sharing: {money(200000)}\n"
-            f"• 2 sharing: {money(175000)}\n"
-            f"• 3 sharing: {money(150000)}\n"
-            f"• 4 sharing: {money(125000)}"
-        )
-
-    # General girls hostel fee
-
-    if has_girls and contains_any(
-        question,
-        [
-            "fee",
-            "fees",
-            "cost",
-            "price",
-            "charges"
-        ]
-    ):
-
-        return (
-            "Girls hostel fees per year are:\n\n"
-            f"• 1 sharing: {money(225000)}\n"
-            f"• 2 sharing: {money(200000)}\n"
-            f"• 3 sharing: {money(175000)}\n"
-            f"• 4 sharing: {money(150000)}"
-        )
-
-    # General hostel question
-
-    if has_hostel:
-
-        return (
-            "Yes, hostel facilities are available for both boys and girls.\n\n"
-            "You can ask me about specific sharing options and fees, "
-            "for example:\n"
-            "• Boys 1 sharing fee\n"
-            "• Boys 3 sharing fee\n"
-            "• Girls 2 sharing fee\n"
-            "• Girls 4 sharing fee"
-        )
-
-    # =====================================================
-    # 4. TRANSPORT - SPECIFIC ROUTES FIRST
+       # =====================================================
+    # TRANSPORT AVAILABILITY AND ROUTE FEES
     # =====================================================
 
-    transport_words = [
+    transport_keywords = [
         "bus",
         "transport",
         "transportation",
-        "college bus",
-        "college buses",
-        "bus service",
-        "bus facility"
+        "commute",
+        "college vehicle",
+        "travel",
+        "travelling",
+        "travelling cost",
+        "travel cost",
+        "travel charges",
+        "bus fare",
+        "bus charges",
+        "pickup",
+        "pick up",
+        "drop",
+        "distance from",
+        "how much to travel",
+        "cost of travelling",
+        "cost of traveling"
     ]
 
-    has_transport_question = contains_any(
-        question,
-        transport_words
+    is_transport_question = any(
+        keyword in q for keyword in transport_keywords
     )
 
-    # Yelahanka
+    if is_transport_question:
 
-    if (
-        has_transport_question
-        and (
-            "yelahanka old town" in question
-            or has_word(question, "yelahanka")
-        )
-    ):
-
-        return (
-            f"Bus/transport fee from Yelahanka Old Town is "
-            f"{money(5000)} per year."
-        )
-
-    # Hennur
-
-    if (
-        has_transport_question
-        and has_word(question, "hennur")
-    ):
-
-        return (
-            f"Bus/transport fee from Hennur is "
-            f"{money(5500)} per year."
-        )
-
-    # Reva Circle
-
-    if (
-        has_transport_question
-        and "reva circle" in question
-    ):
-
-        return (
-            f"Bus/transport fee from Reva Circle is "
-            f"{money(4300)} per year."
-        )
-
-    # General transport
-
-    if has_transport_question:
-
-        return (
-            "College buses are available.\n\n"
-            "Annual transport fees are:\n\n"
-            f"• Yelahanka Old Town: {money(5000)}\n"
-            f"• Hennur: {money(5500)}\n"
-            f"• Reva Circle: {money(4300)}"
-        )
-
-    # =====================================================
-    # 5. COURSE FEES
-    # =====================================================
-
-    asking_fee = contains_any(
-        question,
-        [
-            "fee",
-            "fees",
-            "cost",
-            "price",
-            "tuition"
-        ]
-    )
-
-    if asking_fee:
-
-        if has_word(question, "cse"):
-
-            return (
-                f"CSE course fee is "
-                f"{money(COURSE_FEES['CSE'])} per year."
-            )
-
-        if has_word(question, "ece"):
-
-            return (
-                f"ECE course fee is "
-                f"{money(COURSE_FEES['ECE'])} per year."
-            )
-
-        if "data science" in question:
-
-            return (
-                f"Data Science course fee is "
-                f"{money(COURSE_FEES['Data Science'])} per year."
-            )
-
-        if has_word(question, "cst"):
-
-            return (
-                f"CST course fee is "
-                f"{money(COURSE_FEES['CST'])} per year."
-            )
-
-        if has_word(question, "ce"):
-
-            return (
-                f"CE course fee is "
-                f"{money(COURSE_FEES['CE'])} per year."
-            )
-
-        if has_word(question, "aiml"):
-
-            return (
-                f"AIML course fee is "
-                f"{money(COURSE_FEES['AIML'])} per year."
-            )
-
-        if (
-            has_word(question, "b.com")
-            or "bcom" in question
-            or "b com" in question
+        if fee_context or any(
+            keyword in q
+            for keyword in ["cost", "price", "fee", "fees", "charge", "fare", "how much"]
         ):
 
-            return (
-                f"B.Com course fee is "
-                f"{money(COURSE_FEES['B.Com'])} per year."
-            )
+            for route, amount in TRANSPORT_FEES.items():
 
-        if has_word(question, "bca"):
+                route_name = normalize_text(route)
 
-            return (
-                f"BCA course fee is "
-                f"{money(COURSE_FEES['BCA'])} per year."
-            )
+                if route_name in q or normalize_text(route.split()[0]) in q:
 
-        if has_word(question, "mba"):
+                    return (
+                        f"Annual transport fee from {route} "
+                        f"is {money(amount)}."
+                    )
 
             return (
-                f"MBA course fee is "
-                f"{money(COURSE_FEES['MBA'])} per year."
+                "I couldn't identify that pickup location. "
+                "Currently available transport routes are:\n\n"
+                + "\n".join(
+                    f"• {route}: {money(amount)} per year"
+                    for route, amount in TRANSPORT_FEES.items()
+                )
             )
 
         return (
-            "Course fees per year are:\n\n"
-            f"• CSE: {money(132475)}\n"
-            f"• ECE: {money(132475)}\n"
-            f"• Data Science: {money(132475)}\n"
-            f"• CST: {money(132475)}\n"
-            f"• CE: {money(132475)}\n"
-            f"• AIML: {money(132475)}\n"
-            f"• B.Com: {money(107245)}\n"
-            f"• BCA: {money(107245)}\n"
-            f"• MBA: {money(137000)}"
+            "Yes, CMR University provides transportation "
+            "on selected routes:\n\n"
+            + "\n".join(
+                f"• {route}: {money(amount)} per year"
+                for route, amount in TRANSPORT_FEES.items()
+            )
         )
+    # Course fees: preserve the old recorded fee values; use requested defaults for new programs.
+    if fee_context:
+        matched = []
+        for course in COURSES:
+            title = normalize_text(course)
+            if title and title in q:
+                matched.append(course)
+        aliases = {
+            "mca": ("mca", "master of computer applications"),
+            "bca": ("bca", "bachelor of computer applications"),
+            "mba": ("mba", "master of business administration"),
+            "bba": ("bba", "bachelor of business administration"),
+            "bcom": ("b com", "bcom", "bachelor of commerce"),
+            "mcom": ("m com", "mcom", "master of commerce"),
+            "btech": ("b tech", "btech", "bachelor of technology"),
+            "mtech": ("m tech", "mtech", "master of technology"),
+            "cse": ("cse", "computer science engineering", "computer science and engineering"),
+            "ece": ("ece", "electronics and communication"),
+            "aiml": ("aiml", "ai and ml", "artificial intelligence and machine learning"),
+            "vlsi": ("vlsi", "semiconductor"),
+            "fashion design": ("fashion design",),
+            "psychology": ("psychology",),
+            "optometry": ("optometry", "optom"),
+        }
+        if not matched:
+            for aliases in aliases.values():
+                if any(normalize_text(a) in q for a in aliases):
+                    for course in COURSES:
+                        title = normalize_text(course)
+                        if any(normalize_text(a) in title for a in aliases) and course not in matched:
+                            matched.append(course)
+        if matched:
+            return "Annual course fees (project-provided amounts):\n\n" + "\n".join(f"• {c}: {money(get_course_fee(c))}" for c in matched)
+        return "Annual course fees for the listed programs:\n\n" + "\n".join(f"• {c}: {money(get_course_fee(c))}" for c in COURSES)
 
-    # =====================================================
-    # 6. COURSE EXPLANATIONS
-    # =====================================================
+    # Course catalogue and category matching
+    category_map = {
+        "engineering": ("b.tech", "m.tech", "engineering", "computer engineering"),
+        "medical": ("medical", "anaesthesia", "optometry", "hospital administration", "laboratory technology", "mrit", "aott", "mlt"),
+        "healthcare": ("medical", "anaesthesia", "optometry", "hospital administration", "laboratory technology", "mrit", "aott", "mlt"),
+        "commerce": ("b.com", "m.com", "commerce", "fintech", "accounting"),
+        "management": ("bba", "mba", "e-mba", "management", "business"),
+        "computer applications": ("bca", "mca"),
+        "design": ("design", "architecture", "vfx", "animation"),
+        "law": ("ll.b", "ll.m", "law"),
+        "psychology": ("psychology",),
+        "postgraduate": ("m.tech", "mca", "m.com", "m.sc", "mba", "e-mba", "ll.m"),
+        "undergraduate": ("b.tech", "bca", "b.com", "bba", "b.sc", "b.des", "bachelor", "b.arch", "ll.b"),
+    }
+    for category, markers in category_map.items():
+        if category in q:
+            results = [c for c in COURSES if any(m in c.lower() for m in markers)]
+            if results:
+                return f"{category.title()} programs in the CMR course catalogue:\n\n" + "\n".join(f"• {c}" for c in results)
 
-    if has_word(question, "cse"):
-        return COURSE_EXPLANATIONS["CSE"]
+    course_words = ("course", "courses", "program", "programs", "programme", "programmes", "study", "offer", "offered", "available", "specialisation", "specialization")
+    if any(w in q for w in course_words):
+        matched = [c for c in COURSES if normalize_text(c) in q]
+        if not matched:
+            aliases = ("mca", "bca", "mba", "bba", "b com", "bcom", "m com", "mcom", "cse", "ece", "aiml", "data science", "fintech", "cloud computing", "game development", "vlsi", "semiconductor", "mrit", "aott", "anaesthesia", "mlt", "optometry", "psychology", "law", "fashion design", "interior design", "product design", "communication design", "architecture", "sound engineering", "vfx", "animation", "tourism", "hospitality", "logistics", "digital marketing", "business analytics", "technology management", "journalism", "computer science", "artificial intelligence")
+            hits = [a for a in aliases if normalize_text(a) in q]
+            if hits:
+                matched = [c for c in COURSES if any(normalize_text(a) in normalize_text(c) for a in hits)]
+        if matched:
+            return "These programs match your question:\n\n" + "\n".join(f"• {c}" for c in matched)
+        return f"The CMR course catalogue contains {len(COURSES)} programs:\n\n" + "\n".join(f"{i}. {c}" for i, c in enumerate(COURSES, 1))
 
-    if has_word(question, "ece"):
-        return COURSE_EXPLANATIONS["ECE"]
+    # Attendance
+    if any(x in q for x in ("attendance", "absent", "attend", "minimum percentage", "how many percent", "percentage required")):
+        return f"The attendance requirement recorded in this portal is {ATTENDANCE}. Please confirm the current regulation with the university."
 
-    if "data science" in question:
-        return COURSE_EXPLANATIONS["Data Science"]
+    # Exams
+    if any(x in q for x in ("exam", "examination", "semester test", "internal test", "exam date", "timetable", "test date")):
+        return "The semester examination schedule is announced by the examination department. Please check the latest university notice or contact the examination office."
 
-    if has_word(question, "cst"):
-        return COURSE_EXPLANATIONS["CST"]
+    # Placements
+    if any(x in q for x in ("placement", "job", "recruit", "career opportunity", "campus drive", "companies visit")):
+        return "CMR University has a placement cell that supports placement-related activities. For current recruiters, statistics and eligibility, contact the university placement cell."
 
-    if has_word(question, "ce"):
-        return COURSE_EXPLANATIONS["CE"]
+    # Contact
+    if any(x in q for x in ("contact", "phone", "mobile", "telephone", "call", "number", "reach the college", "email", "address")):
+        return f"You can contact {COLLEGE_NAME} at {CONTACT}."
 
-    if has_word(question, "aiml"):
-        return COURSE_EXPLANATIONS["AIML"]
+    if any(x in q for x in ("which college", "college name", "name of college", "what university")):
+        return f"This student portal is for {COLLEGE_NAME}."
 
-    if (
-        has_word(question, "b.com")
-        or "bcom" in question
-        or "b com" in question
-    ):
-        return COURSE_EXPLANATIONS["B.Com"]
-
-    if has_word(question, "bca"):
-        return COURSE_EXPLANATIONS["BCA"]
-
-    if has_word(question, "mba"):
-        return COURSE_EXPLANATIONS["MBA"]
-
-    # =====================================================
-    # 7. LIST OF COURSES
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "courses offered",
-            "courses available",
-            "what courses",
-            "which courses",
-            "courses in cmr",
-            "courses in college",
-            "list of courses"
-        ]
-    ):
-
-        return (
-            "The courses available are:\n\n"
-            "• CSE\n"
-            "• ECE\n"
-            "• Data Science\n"
-            "• CST\n"
-            "• CE\n"
-            "• AIML\n"
-            "• B.Com\n"
-            "• BCA\n"
-            "• MBA"
-        )
-
-    # =====================================================
-    # 8. COLLEGE TIMINGS
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "college timing",
-            "college timings",
-            "college opens",
-            "college open",
-            "what time does college open",
-            "when does college open",
-            "college working hours",
-            "college hours"
-        ]
-    ):
-
-        return (
-            f"{COLLEGE_NAME} college timings are "
-            f"{COLLEGE_TIMINGS}."
-        )
-
-    # =====================================================
-    # 9. LIBRARY TIMINGS
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "library timing",
-            "library timings",
-            "library open",
-            "library opens",
-            "library hours",
-            "what time is library"
-        ]
-    ):
-
-        return f"Library timings are {LIBRARY_TIMINGS}."
-
-    # =====================================================
-    # 10. ATTENDANCE
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "attendance",
-            "minimum attendance",
-            "attendance requirement",
-            "how much attendance"
-        ]
-    ):
-
-        return (
-            f"The minimum attendance requirement is "
-            f"{ATTENDANCE}."
-        )
-
-    # =====================================================
-    # 11. PLACEMENTS
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "placement",
-            "placements",
-            "placement cell",
-            "job placement",
-            "campus placement"
-        ]
-    ):
-
-        return (
-            "CMR University has a placement cell "
-            "that supports students with placement-related activities."
-        )
-
-    # =====================================================
-    # 12. CONTACT
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "contact",
-            "contact number",
-            "phone number",
-            "mobile number",
-            "telephone",
-            "how to contact"
-        ]
-    ):
-
-        return (
-            f"You can contact {COLLEGE_NAME} at "
-            f"{CONTACT}."
-        )
-
-    # =====================================================
-    # 13. COLLEGE NAME
-    # =====================================================
-
-    if contains_any(
-        question,
-        [
-            "college name",
-            "name of college",
-            "which college",
-            "what college"
-        ]
-    ):
-
-        return f"The college name is {COLLEGE_NAME}."
-
-    # =====================================================
-    # 14. UNKNOWN QUESTIONS
-    # =====================================================
-
+    # Local fallback: do not advertise API setup or make an external request.
     return (
-        "Sorry, I don't know the answer to that question. 😕\n\n"
-        "You can ask me about:\n"
-        "• Courses\n"
-        "• Course fees\n"
-        "• Hostel fees\n"
-        "• Transport fees\n"
-        "• College timings\n"
-        "• Library timings\n"
-        "• Placements\n"
-        "• Attendance\n"
-        "• Contact information"
+        "I can answer questions using the information built into this CMR University portal. "
+        "Try asking about courses, a specific program, annual fees, hostel sharing, "
+        "transport routes, college or library timings, attendance, exams, placements or contact details. "
+        "I don't have a live general-purpose AI engine, so I won't invent answers to unrelated or unavailable questions."
     )
 
 
@@ -910,6 +660,49 @@ st.markdown(
         font-weight: 750;
     }
 
+    /* ---------- CHAT READABILITY FIX ---------- */
+    [data-testid="stChatMessage"] {
+        background: #ffffff !important;
+        border: 1px solid #dce5f0 !important;
+        border-radius: 14px !important;
+        padding: 0.9rem 1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stChatMessage"] div,
+    [data-testid="stChatMessage"] span {
+        color: #10233f !important;
+    }
+
+    [data-testid="stChatMessage"] h1,
+    [data-testid="stChatMessage"] h2,
+    [data-testid="stChatMessage"] h3 {
+        color: #071a33 !important;
+    }
+
+    [data-testid="stChatInput"] {
+        background: #292929 !important;
+        border: 1px solid #596579 !important;
+        border-radius: 12px !important;
+    }
+
+    [data-testid="stChatInput"] textarea {
+        color: #ffffff !important;
+        caret-color: #ffffff !important;
+    }
+
+    [data-testid="stChatInput"] textarea::placeholder {
+        color: #d1d9e4 !important;
+        opacity: 1 !important;
+    }
+
+    [data-testid="stChatInput"] button {
+        color: #ffffff !important;
+        background: #46566b !important;
+    }
+
     /* ---------- BUTTONS ---------- */
 
     .stButton > button {
@@ -931,13 +724,20 @@ st.markdown(
 
 
 # =========================================================
+# CHAT STATE INITIALIZATION
+# =========================================================
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# =========================================================
 # SIDEBAR
 # =========================================================
 
 with st.sidebar:
 
     # Logo
-    logo_path = "cmru_logo.png"
+    logo_path = str(Path(__file__).parent / "cmru_logo.png")
 
     try:
         st.image(logo_path, width=150)
@@ -1298,7 +1098,7 @@ if selected_topic is not None:
 
         fee_cols = st.columns(3)
 
-        for index, course in enumerate(COURSES):
+        for index, course in enumerate(FEE_COURSES):
 
             with fee_cols[index % 3]:
 
@@ -1307,7 +1107,7 @@ if selected_topic is not None:
                     <div class="course-card">
                         <div class="course-name">{course}</div>
                         <div class="course-fee">
-                            {money(COURSE_FEES[course])} / year
+                            {money(get_course_fee(course))} / year
                         </div>
                     </div>
                     """,
@@ -1479,11 +1279,6 @@ st.markdown(
 # =========================================================
 # CHAT HISTORY INITIALIZATION
 # =========================================================
-
-if "messages" not in st.session_state:
-
-    st.session_state.messages = []
-
 
 # =========================================================
 # DISPLAY CHAT HISTORY
